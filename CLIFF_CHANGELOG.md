@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 - *(config)* Added config.rs for loading config file
 - *(lib,error)* Improved TUI
+- *(changelog)* Add config.rs entry and update changelog
+- *(themes)* Added theme support
 
 ### 🐛 Bug Fixes
 
