@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### 📚 Documentation
 
 - *(cliff)* Ran git-cliff for changelog
+- *(changelog)* Update changelog with latest changes
 
 ### ⚙️ Miscellaneous Tasks
 
