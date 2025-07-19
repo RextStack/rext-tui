@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaced all the text with localization system
 - Replaced the key controls with localization system
 - Moved theme switching from main interface (t key) to settings dialog
+- Added more documentation to the codebase
 
 ### Removed
 

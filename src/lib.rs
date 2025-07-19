@@ -1,7 +1,27 @@
-//! The main entry point for the TUI
+//! # Rext TUI - Terminal User Interface for Rext Development
 //!
-//! TODO - The render and app loop should not fail due to missing or failed config files and loads.
-//! Update the app so we have sensible defaults when any config files are missing or fail to load.
+//! A TUI development tool for scaffolding and managing Rext fullstack web applications.
+//!
+//! ## Features
+//!
+//! - **Localization**: Multi-language support with comprehensive key binding system
+//! - **Theme System**: Multiple color themes with easy switching
+//!
+//! ## Configuration
+//!
+//! The TUI uses TOML configuration files for themes, localization, and user preferences.
+//! See the [`config`] module for detailed information about configuration file formats
+//! and locations.
+//!
+//! ## Localization
+//!
+//! Full localization support with the [`localization`] module for text and key bindings.
+//!
+//! ## TODO
+//!
+//! - The render and app loop should not fail due to missing or failed config files and loads.
+//! - Update the app so we have sensible defaults when any config files are missing or fail to load.
+
 pub mod config;
 pub mod error;
 pub mod localization;
@@ -22,6 +42,11 @@ use ratatui::{
 };
 
 /// Dialog types for the application
+///
+/// - `None`: No dialog is open, the main app is running
+/// - `ApiEndpoint`: API endpoint creation dialog
+/// - `Settings`: Settings dialog
+/// - `Language`: Language selection dialog
 #[derive(Debug, Clone, PartialEq)]
 pub enum DialogType {
     None,
@@ -30,7 +55,11 @@ pub enum DialogType {
     Language,
 }
 
-/// Settings dialog option
+/// Settings dialog options
+///
+/// - `Theme`: Theme selection
+/// - `Language`: Language selection
+/// - `Close`: Close the dialog
 #[derive(Debug, Clone, PartialEq)]
 pub enum SettingsOption {
     Theme,
@@ -62,6 +91,11 @@ pub struct App {
     pub language_list_state: ListState,
 }
 
+/// Theme colors
+///
+/// - `primary`: Accent color for highlights, borders, and interactive elements
+/// - `text`: Regular text color for most content
+/// - `background`: Background color for the entire application
 struct Theme {
     primary: Color,
     text: Color,
@@ -127,6 +161,7 @@ impl App {
     }
 
     /// Renders the user interface.
+    /// This is responsible for setting the theme, localizations, and drawing the main app screen
     fn render(&mut self, frame: &mut Frame) {
         // Load colors
         let (primary_color, text_color, background_color) = self.load_colors();
@@ -251,7 +286,7 @@ impl App {
         }
     }
 
-    /// Renders the appropriate dialog based on current_dialog type
+    /// Renders the appropriate dialog based on current_dialog type, via the DialogType enum
     fn render_dialog(&mut self, frame: &mut Frame, theme: Theme) {
         match &self.current_dialog {
             DialogType::ApiEndpoint => self.render_api_endpoint_dialog(frame, theme),
@@ -262,6 +297,12 @@ impl App {
     }
 
     /// Renders the API endpoint dialog in the center of the screen
+    ///
+    /// - `frame`: The frame to render the dialog on
+    /// - `t`: The theme to use for the dialog
+    ///
+    /// > This dialog will be used to create a new API endpoint in a Rext app- does nothing right now.
+    /// > **WARNING**: This is a stub, needs to call the rext-core functions to create the API endpoint. TBD.
     fn render_api_endpoint_dialog(&self, frame: &mut Frame, t: Theme) {
         let area = frame.area();
 
@@ -317,6 +358,11 @@ impl App {
     }
 
     /// Renders the settings dialog
+    ///
+    /// - `frame`: The frame to render the dialog on
+    /// - `t`: The theme to use for the dialog
+    ///
+    /// This dialog displays a list of settings: theme and language selection, with a close option.
     fn render_settings_dialog(&self, frame: &mut Frame, t: Theme) {
         let area = frame.area();
 
@@ -381,6 +427,11 @@ impl App {
     }
 
     /// Renders the language selection dialog
+    ///
+    /// - `frame`: The frame to render the dialog on
+    /// - `t`: The theme to use for the dialog
+    ///
+    /// This dialog displays a list of languages, with a search box and a list of languages.
     fn render_language_dialog(&mut self, frame: &mut Frame, t: Theme) {
         let area = frame.area();
 
