@@ -37,7 +37,6 @@ use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
-    text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
 };
 
@@ -100,6 +99,38 @@ struct Theme {
     primary: Color,
     text: Color,
     background: Color,
+}
+
+/// Macro for creating ratatui styled spans with localization and color
+#[macro_export]
+macro_rules! styled_span {
+    // Create a styled span with localization and color
+    ($localization:expr, $method:ident, $key:expr, $color:expr) => {
+        ratatui::text::Span::styled(
+            $localization.$method($key),
+            ratatui::style::Style::default().fg($color),
+        )
+    };
+    // Create a styled span with localization, color, and additional style modifiers
+    ($localization:expr, $method:ident, $key:expr, $color:expr, $($modifier:ident),+) => {
+        ratatui::text::Span::styled(
+            $localization.$method($key),
+            ratatui::style::Style::default().fg($color)$(.$modifier())+,
+        )
+    };
+}
+
+/// Macro for creating ratatui Line objects with multiple styled spans
+#[macro_export]
+macro_rules! styled_line {
+    // Create a line with multiple styled spans
+    ($($localization:expr, $method:ident, $key:expr, $color:expr $(, $($modifier:ident),+)?);+ $(;)?) => {
+        ratatui::text::Line::from(vec![
+            $(
+                styled_span!($localization, $method, $key, $color $(, $($modifier),+)?),
+            )+
+        ])
+    };
 }
 
 impl Default for App {
@@ -197,16 +228,10 @@ impl App {
             .split(top_area);
 
         // Left side: "add API endpoint" button
-        let button_text = Line::from(vec![
-            Span::styled(
-                self.localization.ui("add_api_endpoint"),
-                Style::default().fg(primary_color).bold(),
-            ),
-            Span::styled(
-                self.localization.ui("add_api_endpoint_shortcut"),
-                Style::default().fg(text_color),
-            ),
-        ]);
+        let button_text = styled_line!(
+            self.localization, ui, "add_api_endpoint", primary_color, bold;
+            self.localization, ui, "add_api_endpoint_shortcut", text_color
+        );
 
         let button_paragraph = Paragraph::new(button_text).style(Style::default().fg(text_color));
         frame.render_widget(
@@ -220,16 +245,10 @@ impl App {
         );
 
         // Right side: settings button
-        let settings_text = Line::from(vec![
-            Span::styled(
-                self.localization.ui("settings_title"),
-                Style::default().fg(primary_color).bold(),
-            ),
-            Span::styled(
-                self.localization.ui("settings_shortcut"),
-                Style::default().fg(text_color),
-            ),
-        ]);
+        let settings_text = styled_line!(
+            self.localization, ui, "settings_title", primary_color, bold;
+            self.localization, ui, "settings_shortcut", text_color
+        );
 
         let settings_paragraph = Paragraph::new(settings_text)
             .style(Style::default().fg(text_color))
@@ -246,28 +265,13 @@ impl App {
 
         // Bottom area with quit instructions
         let bottom_area = chunks[1];
-        let quit_instructions = Line::from(vec![
-            Span::styled(
-                self.localization.msg("quit_instruction_prefix"),
-                Style::default().fg(text_color),
-            ),
-            Span::styled(
-                self.localization.key("quit"),
-                Style::default().fg(primary_color).bold(),
-            ),
-            Span::styled(
-                self.localization.msg("quit_instruction_middle"),
-                Style::default().fg(text_color),
-            ),
-            Span::styled(
-                self.localization.key("quit_combo"),
-                Style::default().fg(primary_color).bold(),
-            ),
-            Span::styled(
-                self.localization.msg("quit_instruction_suffix"),
-                Style::default().fg(text_color),
-            ),
-        ]);
+        let quit_instructions = styled_line!(
+            self.localization, msg, "quit_instruction_prefix", text_color;
+            self.localization, key, "quit", primary_color, bold;
+            self.localization, msg, "quit_instruction_middle", text_color;
+            self.localization, key, "quit_combo", primary_color, bold;
+            self.localization, msg, "quit_instruction_suffix", text_color
+        );
 
         let quit_paragraph = Paragraph::new(quit_instructions).alignment(Alignment::Center);
 

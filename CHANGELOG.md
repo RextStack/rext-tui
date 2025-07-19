@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Ratatui styling macros: `styled_span!` and `styled_line!` for simplified creation of stylized text spans with localization and color support
 - New UI design with color scheme (#1a1a1a background, #ff6b35 accent, #cccccc regular text)
 - "Add API endpoint" button in top-left corner with keyboard shortcut (e)
 - Endpoint creation dialog with text input functionality
