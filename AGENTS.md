@@ -83,6 +83,8 @@ Visit [Rext Stack](https://rextstack.org) for more information.
 ## For AI Agents
 
 When working on this project:
+- **IMPORTANT** - Always update the changelog with changes, following `Keep a Changelog` formatting
+- **IMPORTANT** - Always use the localization system for all text and key bindings, do not hardcode any text or key bindings, meaning update the localization files with new text and key bindings (only en, all other languages will be maintained by the community)
 - Follow Rust 2024 edition conventions
 - Use Ratatui widgets and patterns for UI components
 - Maintain event-driven architecture with crossterm
@@ -92,7 +94,6 @@ When working on this project:
 - Focus on developer experience and workflow efficiency
 - Test TUI components thoroughly
 - Never add new features that were not requested
-- Update Changelog with changes, following `Keep a Changelog` formatting
 - Write a commit message, but NEVER commit changes
 
 ### TUI Development Guidelines
