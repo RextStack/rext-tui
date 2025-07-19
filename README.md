@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/rext-tui.svg)](https://crates.io/crates/rext-tui)
 [![docs.rs documentation](https://img.shields.io/docsrs/rext-tui)](https://docs.rs/rext-tui)
-[![MIT](https://img.shields.io/crates/l/rext-tui.svg)](./LICENSE.txt)
+[![MIT](https://img.shields.io/crates/l/rext-tui.svg)](./LICENSE)
 [![Rust](https://github.com/RextStack/rext-tui/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/RextStack/rext-tui/actions/workflows/rust.yml)
 
 The Rext Terminal User Interface, used to scaffold and build Rext apps.
