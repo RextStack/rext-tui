@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- New UI design with color scheme (#1a1a1a background, #ff6b35 accent, #cccccc regular text)
+- "Add API endpoint" button in top-left corner with keyboard shortcut (e)
+- Endpoint creation dialog with text input functionality
+- Centered dialog box with accent-colored border
+- Text input handling for route names
+- Quit instructions displayed at bottom of screen
+- Added serde and toml to dependencies
+- Added config file for color schemes
+- Added error handling for config file
+- Added config.rs for reading config file
+
+### Changed
+
+- Replaced counter demo with route management interface
+- Removed main border around TUI
+- Updated keyboard event handling to support dialog state
+- Restructured App state to include dialog and input management
+
+### Removed
+
+- Counter increment/decrement functionality
+- Bordered layout from previous demo
+
 ## [0.1.0] - 2025-07-18
 
 ### Added
