@@ -25,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - *(readme)* Update license link in README.md
 - *(AGENTS)* Included additional instructions
 - *(changelog)* Update changelog to include enhancements in key parsing and validation for localization
+- *(changelog)* Update changelog to reflect recent enhancements in key parsing and validation for localization
+- *(config, lib)* Enhanced docs for config and main lib
 
 ### ⚙️ Miscellaneous Tasks
 
