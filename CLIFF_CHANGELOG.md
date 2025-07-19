@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### 🐛 Bug Fixes
+
+- *(workflow)* Update branch references from 'main' to 'master'
+
 ### 📚 Documentation
 
 - *(cliff)* Ran git-cliff for changelog
 - *(changelog)* Update changelog with latest changes
+- *(readme)* Update license link in README.md
 
 ### ⚙️ Miscellaneous Tasks
 
