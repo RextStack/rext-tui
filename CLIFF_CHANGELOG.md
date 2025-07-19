@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - *(themes)* Added theme support
 - *(localization)* Implement localization system and update theme configuration
 - *(dialogs)* Implement settings and language selection dialogs
+- *(localization)* Enhance key parsing and validation system
 
 ### 🐛 Bug Fixes
 
