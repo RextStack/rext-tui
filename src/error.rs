@@ -7,4 +7,10 @@ pub enum RextTuiError {
     ConfigError(#[from] toml::de::Error),
     #[error("Failed to read config file: {0}")]
     ReadConfigFile(std::io::Error),
+    #[error("Failed to write config file: {0}")]
+    WriteConfigFile(std::io::Error),
+    #[error("Failed to serialize config: {0}")]
+    SerializeError(#[from] toml::ser::Error),
+    #[error("Theme '{0}' not found")]
+    ThemeNotFound(String),
 }

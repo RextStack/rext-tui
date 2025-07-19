@@ -1,7 +1,9 @@
 pub mod config;
 pub mod error;
 
-use crate::config::load_config;
+use crate::config::{
+    get_available_themes, load_current_theme, load_theme_colors, save_current_theme,
+};
 use crate::error::RextTuiError;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -13,7 +15,7 @@ use ratatui::{
 };
 
 /// The main application which holds the state and logic of the application.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
@@ -21,12 +23,31 @@ pub struct App {
     pub dialog_open: bool,
     /// Text input buffer for API endpoint name
     pub api_endpoint_input: String,
+    /// Current theme name
+    pub current_theme: String,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            running: false,
+            dialog_open: false,
+            api_endpoint_input: String::new(),
+            current_theme: "rust".to_string(), // rust is the default theme
+        }
+    }
 }
 
 impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
-        Self::default()
+        let current_theme = load_current_theme().unwrap_or_else(|_| "rust".to_string());
+        Self {
+            running: false,
+            dialog_open: false,
+            api_endpoint_input: String::new(),
+            current_theme,
+        }
     }
 
     /// Run the application's main loop.
@@ -57,8 +78,19 @@ impl App {
             ])
             .split(frame.area());
 
-        // Top area with "add API endpoint" button
+        // Top area with buttons
         let top_area = chunks[0];
+
+        // Split top area into left and right sections
+        let top_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(0),     // Left side for API endpoint button
+                Constraint::Length(30), // Right side for theme button
+            ])
+            .split(top_area);
+
+        // Left side: "add API endpoint" button
         let button_text = Line::from(vec![
             Span::styled(
                 "Add API endpoint",
@@ -70,7 +102,35 @@ impl App {
         let button_paragraph = Paragraph::new(button_text).style(Style::default().fg(text_color));
         frame.render_widget(
             button_paragraph,
-            Rect::new(top_area.x + 1, top_area.y + 1, top_area.width, 1),
+            Rect::new(
+                top_chunks[0].x + 1,
+                top_chunks[0].y + 1,
+                top_chunks[0].width,
+                1,
+            ),
+        );
+
+        // Right side: theme button
+        let theme_text = Line::from(vec![
+            Span::styled("Theme: ", Style::default().fg(text_color)),
+            Span::styled(
+                &self.current_theme,
+                Style::default().fg(primary_color).bold(),
+            ),
+            Span::styled(" (t)", Style::default().fg(text_color)),
+        ]);
+
+        let theme_paragraph = Paragraph::new(theme_text)
+            .style(Style::default().fg(text_color))
+            .alignment(Alignment::Right);
+        frame.render_widget(
+            theme_paragraph,
+            Rect::new(
+                top_chunks[1].x,
+                top_chunks[1].y + 1,
+                top_chunks[1].width - 1,
+                1,
+            ),
         );
 
         // Bottom area with quit instructions
@@ -195,6 +255,7 @@ impl App {
                 (_, KeyCode::Esc | KeyCode::Char('q'))
                 | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
                 (_, KeyCode::Char('e') | KeyCode::Char('E')) => self.open_dialog(),
+                (_, KeyCode::Char('t') | KeyCode::Char('T')) => self.cycle_theme(),
                 _ => {}
             }
         }
@@ -224,25 +285,18 @@ impl App {
         self.running = false;
     }
 
-    /// Loads the color configs, falling back to defaults if loading fails
+    /// Loads the color configs from the current theme, falling back to defaults if loading fails
     fn load_colors(&self) -> (Color, Color, Color) {
-        // Try to load color configs, fall back to defaults on error
-        match load_config("config/rext_tui.toml") {
-            Ok(config) => {
-                let primary_color = Color::Rgb(
-                    config.default_colors.primary.r,
-                    config.default_colors.primary.g,
-                    config.default_colors.primary.b,
-                );
-                let text_color = Color::Rgb(
-                    config.default_colors.text.r,
-                    config.default_colors.text.g,
-                    config.default_colors.text.b,
-                );
+        // Try to load colors from the current theme, fall back to defaults on error
+        match load_theme_colors(&self.current_theme) {
+            Ok(colors) => {
+                let primary_color =
+                    Color::Rgb(colors.primary.r, colors.primary.g, colors.primary.b);
+                let text_color = Color::Rgb(colors.text.r, colors.text.g, colors.text.b);
                 let background_color = Color::Rgb(
-                    config.default_colors.background.r,
-                    config.default_colors.background.g,
-                    config.default_colors.background.b,
+                    colors.background.r,
+                    colors.background.g,
+                    colors.background.b,
                 );
                 (primary_color, text_color, background_color)
             }
@@ -252,6 +306,19 @@ impl App {
                 let text_color = Color::Rgb(204, 204, 204); // #cccccc
                 let background_color = Color::Rgb(26, 26, 26); // #1a1a1a
                 (primary_color, text_color, background_color)
+            }
+        }
+    }
+
+    /// Cycles to the next available theme
+    fn cycle_theme(&mut self) {
+        if let Ok(themes) = get_available_themes() {
+            if let Some(current_index) = themes.iter().position(|t| t == &self.current_theme) {
+                let next_index = (current_index + 1) % themes.len();
+                self.current_theme = themes[next_index].clone();
+
+                // Save the new theme selection
+                let _ = save_current_theme(&self.current_theme);
             }
         }
     }

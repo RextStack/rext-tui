@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added config file for color schemes
 - Added error handling for config file
 - Added config.rs for reading config file
+- Added current_theme.toml for storing current theme
+- Added theme switching functionality
 
 ### Changed
 

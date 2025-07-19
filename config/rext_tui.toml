@@ -1,9 +1,59 @@
-[default_colors]
+[themes.rust]
 text = { r = 204, g = 205, b = 204 }
 primary = { r = 255, g = 107, b = 53 }
 background = { r = 26, g = 26, b = 26 }
 
-[dracula_theme]
+[themes.dracula]
 text = { r = 248, g = 248, b = 242 }
 primary = { r = 189, g = 147, b = 249 }
 background = { r = 40, g = 42, b = 54 }
+
+[themes.monokai]
+text = { r = 248, g = 248, b = 242 }
+primary = { r = 166, g = 226, b = 46 }
+background = { r = 39, g = 40, b = 34 }
+
+[themes.gruvbox]
+text = { r = 235, g = 219, b = 178 }
+primary = { r = 250, g = 189, b = 47 }
+background = { r = 40, g = 40, b = 40 }
+
+[themes.solarized_dark]
+text = { r = 131, g = 148, b = 150 }
+primary = { r = 38, g = 139, b = 210 }
+background = { r = 0, g = 43, b = 54 }
+
+[themes.solarized_light]
+text = { r = 101, g = 123, b = 131 }
+primary = { r = 38, g = 139, b = 210 }
+background = { r = 253, g = 246, b = 227 }
+
+[themes.nord]
+text = { r = 216, g = 222, b = 233 }
+primary = { r = 136, g = 192, b = 208 }
+background = { r = 46, g = 52, b = 64 }
+
+[themes.material]
+text = { r = 238, g = 255, b = 255 }
+primary = { r = 128, g = 203, b = 196 }
+background = { r = 38, g = 50, b = 56 }
+
+[themes.one_dark]
+text = { r = 171, g = 178, b = 191 }
+primary = { r = 97, g = 175, b = 239 }
+background = { r = 40, g = 44, b = 52 }
+
+[themes.github_dark]
+text = { r = 230, g = 237, b = 243 }
+primary = { r = 88, g = 166, b = 255 }
+background = { r = 13, g = 17, b = 23 }
+
+[themes.tokyo_night]
+text = { r = 169, g = 177, b = 214 }
+primary = { r = 122, g = 162, b = 247 }
+background = { r = 26, g = 27, b = 38 }
+
+[themes.catppuccin]
+text = { r = 205, g = 214, b = 244 }
+primary = { r = 203, g = 166, b = 247 }
+background = { r = 30, g = 30, b = 46 }
