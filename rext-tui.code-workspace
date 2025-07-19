@@ -1,0 +1,20 @@
+{
+  "folders": [
+      {
+          "name": "rext-tui",
+          "path": "."
+      }
+  ],
+  "settings": {
+      "[rust]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+      },
+  },
+  "extensions": {
+      "recommendations": [
+          "rust-lang.rust-analyzer",
+          "fill-labs.dependi"
+      ]
+  }
+}
