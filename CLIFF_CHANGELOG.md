@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### 📚 Documentation
+
+- *(cliff)* Ran git-cliff for changelog
+
 ### ⚙️ Miscellaneous Tasks
 
 - *(gitignore)* Added .env to gitignore just in case
