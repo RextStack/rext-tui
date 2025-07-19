@@ -1,11 +1,18 @@
+//! The main entry point for the TUI
+//!
+//! TODO - The render and app loop should not fail due to missing or failed config files and loads.
+//! Update the app so we have sensible defaults when any config files are missing or fail to load.
 pub mod config;
 pub mod error;
+pub mod localization;
 
 use crate::config::{
-    get_available_themes, load_current_theme, load_theme_colors, save_current_theme,
+    get_available_themes, load_current_language, load_current_theme, load_theme_colors,
+    save_current_theme,
 };
 use crate::error::RextTuiError;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crate::localization::Localization;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -15,7 +22,6 @@ use ratatui::{
 };
 
 /// The main application which holds the state and logic of the application.
-#[derive(Debug)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
@@ -25,15 +31,24 @@ pub struct App {
     pub api_endpoint_input: String,
     /// Current theme name
     pub current_theme: String,
+    /// Localization system
+    pub localization: Localization,
 }
 
 impl Default for App {
     fn default() -> Self {
+        // get the language from the current_localization.toml file
+        let language = load_current_language().unwrap_or_else(|_| "en".to_string());
+        let localization = Localization::new(&language).unwrap_or_else(|_| {
+            Localization::new("en").expect("Failed to load English localization")
+        });
+
         Self {
             running: false,
             dialog_open: false,
             api_endpoint_input: String::new(),
             current_theme: "rust".to_string(), // rust is the default theme
+            localization,
         }
     }
 }
@@ -42,11 +57,19 @@ impl App {
     /// Construct a new instance of [`App`].
     pub fn new() -> Self {
         let current_theme = load_current_theme().unwrap_or_else(|_| "rust".to_string());
+        let language = load_current_language().unwrap_or_else(|_| "en".to_string());
+        let localization = Localization::new(&language).unwrap_or_else(|_| {
+            // If we can't load localization, create a minimal fallback
+            // This shouldn't happen in normal operation since we ship with en.toml
+            Localization::new("en").expect("Failed to load English localization")
+        });
+
         Self {
             running: false,
             dialog_open: false,
             api_endpoint_input: String::new(),
             current_theme,
+            localization,
         }
     }
 
@@ -93,10 +116,13 @@ impl App {
         // Left side: "add API endpoint" button
         let button_text = Line::from(vec![
             Span::styled(
-                "Add API endpoint",
+                self.localization.ui("add_api_endpoint"),
                 Style::default().fg(primary_color).bold(),
             ),
-            Span::styled(" (e)", Style::default().fg(text_color)),
+            Span::styled(
+                self.localization.ui("add_api_endpoint_shortcut"),
+                Style::default().fg(text_color),
+            ),
         ]);
 
         let button_paragraph = Paragraph::new(button_text).style(Style::default().fg(text_color));
@@ -112,12 +138,18 @@ impl App {
 
         // Right side: theme button
         let theme_text = Line::from(vec![
-            Span::styled("Theme: ", Style::default().fg(text_color)),
+            Span::styled(
+                self.localization.ui("theme_label"),
+                Style::default().fg(text_color),
+            ),
             Span::styled(
                 &self.current_theme,
                 Style::default().fg(primary_color).bold(),
             ),
-            Span::styled(" (t)", Style::default().fg(text_color)),
+            Span::styled(
+                self.localization.ui("theme_shortcut"),
+                Style::default().fg(text_color),
+            ),
         ]);
 
         let theme_paragraph = Paragraph::new(theme_text)
@@ -136,11 +168,26 @@ impl App {
         // Bottom area with quit instructions
         let bottom_area = chunks[1];
         let quit_instructions = Line::from(vec![
-            Span::styled("Press ", Style::default().fg(text_color)),
-            Span::styled("q", Style::default().fg(primary_color).bold()),
-            Span::styled(" or ", Style::default().fg(text_color)),
-            Span::styled("Ctrl+C", Style::default().fg(primary_color).bold()),
-            Span::styled(" to quit", Style::default().fg(text_color)),
+            Span::styled(
+                self.localization.msg("quit_instruction_prefix"),
+                Style::default().fg(text_color),
+            ),
+            Span::styled(
+                self.localization.key("quit"),
+                Style::default().fg(primary_color).bold(),
+            ),
+            Span::styled(
+                self.localization.msg("quit_instruction_middle"),
+                Style::default().fg(text_color),
+            ),
+            Span::styled(
+                self.localization.key("quit_combo"),
+                Style::default().fg(primary_color).bold(),
+            ),
+            Span::styled(
+                self.localization.msg("quit_instruction_suffix"),
+                Style::default().fg(text_color),
+            ),
         ]);
 
         let quit_paragraph = Paragraph::new(quit_instructions).alignment(Alignment::Center);
@@ -202,14 +249,19 @@ impl App {
             .split(inner_area);
 
         // Render label
-        let label = Paragraph::new("API endpoint name:").style(Style::default().fg(text_color));
+        let label = Paragraph::new(self.localization.ui("api_endpoint_name_prompt"))
+            .style(Style::default().fg(text_color));
         frame.render_widget(label, chunks[0]);
 
         // Render input field
         let input_text = if self.api_endpoint_input.is_empty() {
-            "_".to_string()
+            self.localization.ui("input_cursor").to_string()
         } else {
-            format!("{}_", self.api_endpoint_input)
+            format!(
+                "{}{}",
+                self.api_endpoint_input,
+                self.localization.ui("input_cursor")
+            )
         };
 
         let input = Paragraph::new(input_text).style(Style::default().fg(primary_color));
@@ -230,33 +282,51 @@ impl App {
     /// Handles the key events and updates the state of [`App`].
     pub fn on_key_event(&mut self, key: KeyEvent) {
         if self.dialog_open {
-            // Handle dialog input
-            match key.code {
-                KeyCode::Enter => {
-                    // Close dialog and process the API endpoint name
-                    let api_endpoint_name = self.api_endpoint_input.clone();
-                    self.close_dialog();
-                    self.handle_api_endpoint_creation(api_endpoint_name);
-                }
-                KeyCode::Esc => {
-                    self.close_dialog();
-                }
-                KeyCode::Backspace => {
-                    self.api_endpoint_input.pop();
-                }
-                KeyCode::Char(c) => {
-                    self.api_endpoint_input.push(c);
-                }
-                _ => {}
+            // Handle dialog input using localized key bindings
+            if self
+                .localization
+                .matches_key("enter", key.modifiers, key.code)
+            {
+                // Close dialog and process the API endpoint name
+                let api_endpoint_name = self.api_endpoint_input.clone();
+                self.close_dialog();
+                self.handle_api_endpoint_creation(api_endpoint_name);
+            } else if self
+                .localization
+                .matches_key("escape", key.modifiers, key.code)
+            {
+                self.close_dialog();
+            } else if self
+                .localization
+                .matches_key("backspace", key.modifiers, key.code)
+            {
+                self.api_endpoint_input.pop();
+            } else if let KeyCode::Char(c) = key.code {
+                self.api_endpoint_input.push(c);
             }
         } else {
-            // Handle main app input
-            match (key.modifiers, key.code) {
-                (_, KeyCode::Esc | KeyCode::Char('q'))
-                | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
-                (_, KeyCode::Char('e') | KeyCode::Char('E')) => self.open_dialog(),
-                (_, KeyCode::Char('t') | KeyCode::Char('T')) => self.cycle_theme(),
-                _ => {}
+            // Handle main app input using localized key bindings
+            if self
+                .localization
+                .matches_key("quit", key.modifiers, key.code)
+                || self
+                    .localization
+                    .matches_key("quit_combo", key.modifiers, key.code)
+                || self
+                    .localization
+                    .matches_key("escape", key.modifiers, key.code)
+            {
+                self.quit();
+            } else if self
+                .localization
+                .matches_key("add_endpoint", key.modifiers, key.code)
+            {
+                self.open_dialog();
+            } else if self
+                .localization
+                .matches_key("toggle_theme", key.modifiers, key.code)
+            {
+                self.cycle_theme();
             }
         }
     }

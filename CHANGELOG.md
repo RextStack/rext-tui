@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added config.rs for reading config file
 - Added current_theme.toml for storing current theme
 - Added theme switching functionality
+- Added current_localization.toml for storing current localization
+- Added localization system with english as fallback
+
 
 ### Changed
 
@@ -27,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Removed main border around TUI
 - Updated keyboard event handling to support dialog state
 - Restructured App state to include dialog and input management
+- Replaced all the text with localization system
+- Replaced the key controls with localization system
 
 ### Removed
 

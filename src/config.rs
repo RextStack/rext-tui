@@ -16,6 +16,14 @@ pub struct Rgb {
 #[derive(Deserialize)]
 pub struct Config {
     pub themes: HashMap<String, Colors>,
+    pub localization: HashMap<String, LocalizationConfig>,
+}
+
+/// Stores the localization config
+#[derive(Deserialize)]
+pub struct LocalizationConfig {
+    pub language: String,
+    pub display: String,
 }
 
 /// Stores the color values for the TUI from rext_tui.toml
@@ -32,8 +40,15 @@ pub struct CurrentTheme {
     pub current_theme: String,
 }
 
+/// Stores the current localization for the TUI from current_localization.toml
+#[derive(Deserialize, Serialize)]
+pub struct CurrentLocalization {
+    pub current_localization: String,
+}
+
 const CONFIG_PATH: &str = "config/rext_tui.toml";
 const CURRENT_THEME_PATH: &str = "config/current_theme.toml";
+const CURRENT_LOCALIZATION_PATH: &str = "config/current_localization.toml";
 
 /// Loads the config values for the TUI from rext_tui.toml
 pub fn load_config() -> Result<Config, RextTuiError> {
@@ -80,4 +95,32 @@ pub fn get_available_themes() -> Result<Vec<String>, RextTuiError> {
     let mut themes: Vec<String> = config.themes.keys().cloned().collect();
     themes.sort();
     Ok(themes)
+}
+
+/// Gets the current language for the TUI from current_localization.toml
+pub fn load_current_language() -> Result<String, RextTuiError> {
+    let contents = fs::read_to_string(CURRENT_LOCALIZATION_PATH)
+        .map_err(|e| RextTuiError::ReadConfigFile(e))?;
+    let localization_config: LocalizationConfig =
+        toml::from_str(&contents).map_err(|e| RextTuiError::ConfigError(e))?;
+    Ok(localization_config.language)
+}
+
+/// Saves the current language for the TUI to current_localization.toml
+pub fn save_current_language(language: &str) -> Result<(), RextTuiError> {
+    let localization_config = CurrentLocalization {
+        current_localization: language.to_string(),
+    };
+    let contents =
+        toml::to_string(&localization_config).map_err(|e| RextTuiError::SerializeError(e))?;
+    fs::write(CURRENT_LOCALIZATION_PATH, contents).map_err(|e| RextTuiError::WriteConfigFile(e))?;
+    Ok(())
+}
+
+/// Gets the available languages for the TUI from rext_tui.toml
+pub fn get_available_languages() -> Result<Vec<String>, RextTuiError> {
+    let config = load_config()?;
+    let mut languages: Vec<String> = config.localization.keys().cloned().collect();
+    languages.sort();
+    Ok(languages)
 }

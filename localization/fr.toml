@@ -1,0 +1,21 @@
+[ui]
+add_api_endpoint = "Ajouter un endpoint API"
+add_api_endpoint_shortcut = " (a)"
+theme_label = "Thème: "
+theme_shortcut = " (t)"
+api_endpoint_name_prompt = "Nom de l'endpoint API:"
+input_cursor = "_"
+
+[messages]
+quit_instruction_prefix = "Appuyez sur "
+quit_instruction_middle = " ou "
+quit_instruction_suffix = " pour quitter"
+
+[keys]
+add_endpoint = "a"
+toggle_theme = "t"
+quit = "q"
+quit_combo = "Ctrl+C"
+escape = "Esc"
+enter = "Enter"
+backspace = "Backspace"

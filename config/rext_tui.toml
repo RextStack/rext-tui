@@ -57,3 +57,11 @@ background = { r = 26, g = 27, b = 38 }
 text = { r = 205, g = 214, b = 244 }
 primary = { r = 203, g = 166, b = 247 }
 background = { r = 30, g = 30, b = 46 }
+
+[localization.en]
+language = "en"
+display = "English"
+
+[localization.fr]
+language = "fr"
+display = "French"
