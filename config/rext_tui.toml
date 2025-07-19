@@ -1,0 +1,9 @@
+[default_colors]
+text = { r = 204, g = 205, b = 204 }
+primary = { r = 255, g = 107, b = 53 }
+background = { r = 26, g = 26, b = 26 }
+
+[dracula_theme]
+text = { r = 248, g = 248, b = 242 }
+primary = { r = 189, g = 147, b = 249 }
+background = { r = 40, g = 42, b = 54 }
