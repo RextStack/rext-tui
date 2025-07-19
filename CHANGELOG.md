@@ -27,7 +27,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Language filtering with up/down arrow navigation
 - Dynamic language switching with localization reload
 - Theme switching moved to settings dialog from main interface
+- Added comprehensive key parsing for all common key types (F1-F12, modifiers, etc.)
+- Added validation system for localization key bindings
+- Added case-insensitive key parsing and better error handling
 
+### Fixed
+
+- Fixed localization system to properly support arrow keys and navigation keys
 
 ### Changed
 

@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - *(changelog)* Add config.rs entry and update changelog
 - *(themes)* Added theme support
 - *(localization)* Implement localization system and update theme configuration
+- *(dialogs)* Implement settings and language selection dialogs
 
 ### 🐛 Bug Fixes
 
@@ -21,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - *(cliff)* Ran git-cliff for changelog
 - *(changelog)* Update changelog with latest changes
 - *(readme)* Update license link in README.md
+- *(AGENTS)* Included additional instructions
 
 ### ⚙️ Miscellaneous Tasks
 

@@ -30,14 +30,28 @@
 //! escape = "Esc"
 //! enter = "Enter"
 //! backspace = "Backspace"
+//! up = "Up"
+//! down = "Down"
 //! ```
 //!
+//! ## UI and Messages
 //! ui is for general text display on the user interface such as instructions and input labels.
-//!
 //! messages are intended for storing text that prompts the user, not strictly tied to one portion of the UI
 //!
+//! ## Keys
 //! keys are for both displaying and controlling which key should be pressed on the keyboard for an action.
 //! Each key entry serves dual purpose - both for display and actual key binding.
+//!
+//! ## Supported Key Formats
+//! The localization system supports a wide range of key formats (case-insensitive):
+//! - **Single characters**: "a", "q", "1", "2"
+//! - **Special keys**: "Esc"/"Escape", "Enter"/"Return", "Backspace"/"Back", "Tab", "Delete"/"Del", "Insert"/"Ins"
+//! - **Arrow keys**: "Up", "Down", "Left", "Right", "UpArrow", "DownArrow", "LeftArrow", "RightArrow"
+//! - **Navigation keys**: "Home", "End", "PageUp"/"PgUp", "PageDown"/"PgDn"
+//! - **Function keys**: "F1", "F2", ..., "F12"
+//! - **Modifier combinations**: "Ctrl+C", "Shift+Tab", "Alt+Enter", "Control+A"
+//!
+//! The system validates all key bindings on startup and will warn about invalid key strings.
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -69,10 +83,15 @@ impl Localization {
             Self::load_language(lang).unwrap_or_else(|_| fallback_texts.clone())
         };
 
-        Ok(Self {
+        let localization = Self {
             texts,
             fallback_texts,
-        })
+        };
+
+        // Validate key bindings on creation
+        localization.validate_key_bindings();
+
+        Ok(localization)
     }
 
     /// Reloads the localization system with a new language
@@ -83,7 +102,92 @@ impl Localization {
             Self::load_language(lang).unwrap_or_else(|_| self.fallback_texts.clone())
         };
         self.texts = texts;
+
+        // Validate key bindings after reload
+        self.validate_key_bindings();
+
         Ok(())
+    }
+
+    /// Validates all key bindings in the current localization
+    /// Prints warnings for any keys that cannot be parsed
+    pub fn validate_key_bindings(&self) {
+        let mut invalid_keys = Vec::new();
+
+        for (action, key_str) in &self.texts.keys {
+            if Self::parse_key_string(key_str).is_none() {
+                invalid_keys.push((action.clone(), key_str.clone()));
+            }
+        }
+
+        if !invalid_keys.is_empty() {
+            eprintln!(
+                "Warning: Found {} invalid key binding(s) in localization:",
+                invalid_keys.len()
+            );
+            for (action, key_str) in invalid_keys {
+                eprintln!("  - Action '{}': Invalid key string '{}'", action, key_str);
+            }
+            eprintln!("These key bindings will not work. Please check your localization files.");
+        }
+    }
+
+    /// Gets a list of all supported key string formats for documentation
+    pub fn get_supported_key_formats() -> Vec<&'static str> {
+        vec![
+            // Single characters
+            "a",
+            "q",
+            "1",
+            "2",
+            // Special keys
+            "Esc",
+            "Escape",
+            "Enter",
+            "Return",
+            "Backspace",
+            "Back",
+            "Tab",
+            "Delete",
+            "Del",
+            "Insert",
+            "Ins",
+            // Arrow keys
+            "Up",
+            "Down",
+            "Left",
+            "Right",
+            "UpArrow",
+            "DownArrow",
+            "LeftArrow",
+            "RightArrow",
+            // Navigation keys
+            "Home",
+            "End",
+            "PageUp",
+            "PgUp",
+            "PageDown",
+            "PgDn",
+            // Function keys
+            "F1",
+            "F2",
+            "F3",
+            "F4",
+            "F5",
+            "F6",
+            "F7",
+            "F8",
+            "F9",
+            "F10",
+            "F11",
+            "F12",
+            // Modifier combinations
+            "Ctrl+C",
+            "Shift+Tab",
+            "Alt+Enter",
+            "Control+A",
+            "Shift+F1",
+        ]
     }
 
     /// Loads the localized texts for the TUI from the localization directory
@@ -152,29 +256,109 @@ impl Localization {
     }
 
     /// Parses a key string into KeyModifiers and KeyCode
-    /// Examples: "q" -> (KeyModifiers::NONE, KeyCode::Char('q'))
-    ///          "Ctrl+C" -> (KeyModifiers::CONTROL, KeyCode::Char('C'))
-    ///          "Esc" -> (KeyModifiers::NONE, KeyCode::Esc)
+    /// Supports common key formats including:
+    /// - Single characters: "q", "a", "1"
+    /// - Special keys: "Esc", "Enter", "Backspace", "Tab", "Delete"
+    /// - Arrow keys: "Up", "Down", "Left", "Right"
+    /// - Navigation: "Home", "End", "PageUp", "PageDown"
+    /// - Function keys: "F1", "F2", ..., "F12"
+    /// - Modifiers: "Ctrl+C", "Shift+Tab", "Alt+Enter"
+    /// - Case insensitive: "up", "UP", "Up" all work
     fn parse_key_string(key_str: &str) -> Option<(KeyModifiers, KeyCode)> {
-        if key_str.contains("Ctrl+") {
-            let key_part = key_str.strip_prefix("Ctrl+")?;
-            if key_part.len() == 1 {
-                let ch = key_part.chars().next()?;
-                Some((KeyModifiers::CONTROL, KeyCode::Char(ch)))
-            } else {
+        let key_str = key_str.trim();
+
+        // Handle modifier combinations
+        if key_str.contains('+') {
+            return Self::parse_modified_key(key_str);
+        }
+
+        // Handle single keys (case-insensitive)
+        let normalized = key_str.to_lowercase();
+        match normalized.as_str() {
+            // Special keys
+            "esc" | "escape" => Some((KeyModifiers::NONE, KeyCode::Esc)),
+            "enter" | "return" => Some((KeyModifiers::NONE, KeyCode::Enter)),
+            "backspace" | "back" => Some((KeyModifiers::NONE, KeyCode::Backspace)),
+            "tab" => Some((KeyModifiers::NONE, KeyCode::Tab)),
+            "delete" | "del" => Some((KeyModifiers::NONE, KeyCode::Delete)),
+            "insert" | "ins" => Some((KeyModifiers::NONE, KeyCode::Insert)),
+
+            // Arrow keys
+            "up" | "uparrow" => Some((KeyModifiers::NONE, KeyCode::Up)),
+            "down" | "downarrow" => Some((KeyModifiers::NONE, KeyCode::Down)),
+            "left" | "leftarrow" => Some((KeyModifiers::NONE, KeyCode::Left)),
+            "right" | "rightarrow" => Some((KeyModifiers::NONE, KeyCode::Right)),
+
+            // Navigation keys
+            "home" => Some((KeyModifiers::NONE, KeyCode::Home)),
+            "end" => Some((KeyModifiers::NONE, KeyCode::End)),
+            "pageup" | "pgup" => Some((KeyModifiers::NONE, KeyCode::PageUp)),
+            "pagedown" | "pgdn" => Some((KeyModifiers::NONE, KeyCode::PageDown)),
+
+            // Function keys
+            "f1" => Some((KeyModifiers::NONE, KeyCode::F(1))),
+            "f2" => Some((KeyModifiers::NONE, KeyCode::F(2))),
+            "f3" => Some((KeyModifiers::NONE, KeyCode::F(3))),
+            "f4" => Some((KeyModifiers::NONE, KeyCode::F(4))),
+            "f5" => Some((KeyModifiers::NONE, KeyCode::F(5))),
+            "f6" => Some((KeyModifiers::NONE, KeyCode::F(6))),
+            "f7" => Some((KeyModifiers::NONE, KeyCode::F(7))),
+            "f8" => Some((KeyModifiers::NONE, KeyCode::F(8))),
+            "f9" => Some((KeyModifiers::NONE, KeyCode::F(9))),
+            "f10" => Some((KeyModifiers::NONE, KeyCode::F(10))),
+            "f11" => Some((KeyModifiers::NONE, KeyCode::F(11))),
+            "f12" => Some((KeyModifiers::NONE, KeyCode::F(12))),
+
+            // Single character keys
+            single_char if single_char.len() == 1 => {
+                let ch = key_str.chars().next()?; // Use original case for character
+                Some((KeyModifiers::NONE, KeyCode::Char(ch)))
+            }
+
+            // Unknown key
+            _ => {
+                eprintln!("Warning: Unknown key string '{}' in localization", key_str);
                 None
             }
-        } else {
-            match key_str {
-                "Esc" => Some((KeyModifiers::NONE, KeyCode::Esc)),
-                "Enter" => Some((KeyModifiers::NONE, KeyCode::Enter)),
-                "Backspace" => Some((KeyModifiers::NONE, KeyCode::Backspace)),
-                single_char if single_char.len() == 1 => {
-                    let ch = single_char.chars().next()?;
-                    Some((KeyModifiers::NONE, KeyCode::Char(ch)))
-                }
-                _ => None,
+        }
+    }
+
+    /// Parses modified key combinations like "Ctrl+C", "Shift+Tab", "Alt+Enter"
+    fn parse_modified_key(key_str: &str) -> Option<(KeyModifiers, KeyCode)> {
+        let parts: Vec<&str> = key_str.split('+').collect();
+        if parts.len() != 2 {
+            eprintln!(
+                "Warning: Invalid key combination '{}' in localization",
+                key_str
+            );
+            return None;
+        }
+
+        let modifier_str = parts[0].trim().to_lowercase();
+        let key_part = parts[1].trim();
+
+        let modifiers = match modifier_str.as_str() {
+            "ctrl" | "control" => KeyModifiers::CONTROL,
+            "shift" => KeyModifiers::SHIFT,
+            "alt" => KeyModifiers::ALT,
+            _ => {
+                eprintln!(
+                    "Warning: Unknown modifier '{}' in key combination '{}'",
+                    modifier_str, key_str
+                );
+                return None;
             }
+        };
+
+        // Parse the key part (recursively, but without modifiers)
+        if let Some((_, key_code)) = Self::parse_key_string(key_part) {
+            Some((modifiers, key_code))
+        } else {
+            eprintln!(
+                "Warning: Invalid key '{}' in combination '{}'",
+                key_part, key_str
+            );
+            None
         }
     }
 

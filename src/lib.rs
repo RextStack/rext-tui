@@ -12,7 +12,7 @@ use crate::config::{
 };
 use crate::error::RextTuiError;
 use crate::localization::Localization;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -536,13 +536,16 @@ impl App {
             .matches_key("escape", key.modifiers, key.code)
         {
             self.close_dialog();
-        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Up {
+        } else if self.localization.matches_key("up", key.modifiers, key.code) {
             if self.settings_selected > 0 {
                 self.settings_selected -= 1;
             } else {
                 self.settings_selected = 2; // Wrap to bottom (Close option)
             }
-        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Down {
+        } else if self
+            .localization
+            .matches_key("down", key.modifiers, key.code)
+        {
             self.settings_selected = (self.settings_selected + 1) % 3;
         } else if self
             .localization
@@ -573,13 +576,16 @@ impl App {
             .matches_key("escape", key.modifiers, key.code)
         {
             self.close_dialog();
-        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Up {
+        } else if self.localization.matches_key("up", key.modifiers, key.code) {
             if !self.filtered_languages.is_empty() && self.language_selected > 0 {
                 self.language_selected -= 1;
             } else if !self.filtered_languages.is_empty() {
                 self.language_selected = self.filtered_languages.len() - 1;
             }
-        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Down {
+        } else if self
+            .localization
+            .matches_key("down", key.modifiers, key.code)
+        {
             if !self.filtered_languages.is_empty() {
                 self.language_selected =
                     (self.language_selected + 1) % self.filtered_languages.len();
