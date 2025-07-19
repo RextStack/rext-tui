@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added theme switching functionality
 - Added current_localization.toml for storing current localization
 - Added localization system with english as fallback
+- Settings dialog with keyboard shortcut (s) to access theme and language options
+- Language selection dialog with search functionality
+- Language filtering with up/down arrow navigation
+- Dynamic language switching with localization reload
+- Theme switching moved to settings dialog from main interface
 
 
 ### Changed
@@ -32,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Restructured App state to include dialog and input management
 - Replaced all the text with localization system
 - Replaced the key controls with localization system
+- Moved theme switching from main interface (t key) to settings dialog
 
 ### Removed
 

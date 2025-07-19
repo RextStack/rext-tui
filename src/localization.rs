@@ -75,6 +75,17 @@ impl Localization {
         })
     }
 
+    /// Reloads the localization system with a new language
+    pub fn reload(&mut self, lang: &str) -> Result<(), RextTuiError> {
+        let texts = if lang == "en" {
+            self.fallback_texts.clone()
+        } else {
+            Self::load_language(lang).unwrap_or_else(|_| self.fallback_texts.clone())
+        };
+        self.texts = texts;
+        Ok(())
+    }
+
     /// Loads the localized texts for the TUI from the localization directory
     fn load_language(lang: &str) -> Result<LocalizedTexts, RextTuiError> {
         let path = format!("localization/{}.toml", lang);

@@ -7,32 +7,65 @@ pub mod error;
 pub mod localization;
 
 use crate::config::{
-    get_available_themes, load_current_language, load_current_theme, load_theme_colors,
-    save_current_theme,
+    get_available_languages_with_display, get_available_themes, load_current_language,
+    load_current_theme, load_theme_colors, save_current_language, save_current_theme,
 };
 use crate::error::RextTuiError;
 use crate::localization::Localization;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
 };
+
+/// Dialog types for the application
+#[derive(Debug, Clone, PartialEq)]
+pub enum DialogType {
+    None,
+    ApiEndpoint,
+    Settings,
+    Language,
+}
+
+/// Settings dialog option
+#[derive(Debug, Clone, PartialEq)]
+pub enum SettingsOption {
+    Theme,
+    Language,
+    Close,
+}
 
 /// The main application which holds the state and logic of the application.
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// Is the API endpoint dialog open?
-    pub dialog_open: bool,
+    /// Current active dialog
+    pub current_dialog: DialogType,
     /// Text input buffer for API endpoint name
     pub api_endpoint_input: String,
     /// Current theme name
     pub current_theme: String,
     /// Localization system
     pub localization: Localization,
+    /// Settings dialog selected index
+    pub settings_selected: usize,
+    /// Language dialog search input
+    pub language_search: String,
+    /// Language dialog selected index
+    pub language_selected: usize,
+    /// Filtered languages list
+    pub filtered_languages: Vec<(String, String)>,
+    /// Language dialog list state
+    pub language_list_state: ListState,
+}
+
+struct Theme {
+    primary: Color,
+    text: Color,
+    background: Color,
 }
 
 impl Default for App {
@@ -45,10 +78,15 @@ impl Default for App {
 
         Self {
             running: false,
-            dialog_open: false,
+            current_dialog: DialogType::None,
             api_endpoint_input: String::new(),
             current_theme: "rust".to_string(), // rust is the default theme
             localization,
+            settings_selected: 0,
+            language_search: String::new(),
+            language_selected: 0,
+            filtered_languages: Vec::new(),
+            language_list_state: ListState::default(),
         }
     }
 }
@@ -66,10 +104,15 @@ impl App {
 
         Self {
             running: false,
-            dialog_open: false,
+            current_dialog: DialogType::None,
             api_endpoint_input: String::new(),
             current_theme,
             localization,
+            settings_selected: 0,
+            language_search: String::new(),
+            language_selected: 0,
+            filtered_languages: Vec::new(),
+            language_list_state: ListState::default(),
         }
     }
 
@@ -87,6 +130,11 @@ impl App {
     fn render(&mut self, frame: &mut Frame) {
         // Load colors
         let (primary_color, text_color, background_color) = self.load_colors();
+        let theme = Theme {
+            primary: primary_color,
+            text: text_color,
+            background: background_color,
+        };
 
         // Set background color
         let background = Block::default().style(Style::default().bg(background_color));
@@ -109,7 +157,7 @@ impl App {
             .direction(Direction::Horizontal)
             .constraints([
                 Constraint::Min(0),     // Left side for API endpoint button
-                Constraint::Length(30), // Right side for theme button
+                Constraint::Length(30), // Right side for settings button
             ])
             .split(top_area);
 
@@ -136,27 +184,23 @@ impl App {
             ),
         );
 
-        // Right side: theme button
-        let theme_text = Line::from(vec![
+        // Right side: settings button
+        let settings_text = Line::from(vec![
             Span::styled(
-                self.localization.ui("theme_label"),
-                Style::default().fg(text_color),
-            ),
-            Span::styled(
-                &self.current_theme,
+                self.localization.ui("settings_title"),
                 Style::default().fg(primary_color).bold(),
             ),
             Span::styled(
-                self.localization.ui("theme_shortcut"),
+                self.localization.ui("settings_shortcut"),
                 Style::default().fg(text_color),
             ),
         ]);
 
-        let theme_paragraph = Paragraph::new(theme_text)
+        let settings_paragraph = Paragraph::new(settings_text)
             .style(Style::default().fg(text_color))
             .alignment(Alignment::Right);
         frame.render_widget(
-            theme_paragraph,
+            settings_paragraph,
             Rect::new(
                 top_chunks[1].x,
                 top_chunks[1].y + 1,
@@ -202,19 +246,23 @@ impl App {
         frame.render_widget(quit_paragraph, quit_rect);
 
         // Render dialog if open
-        if self.dialog_open {
-            self.render_dialog(frame, primary_color, text_color, background_color);
+        if self.current_dialog != DialogType::None {
+            self.render_dialog(frame, theme);
+        }
+    }
+
+    /// Renders the appropriate dialog based on current_dialog type
+    fn render_dialog(&mut self, frame: &mut Frame, theme: Theme) {
+        match &self.current_dialog {
+            DialogType::ApiEndpoint => self.render_api_endpoint_dialog(frame, theme),
+            DialogType::Settings => self.render_settings_dialog(frame, theme),
+            DialogType::Language => self.render_language_dialog(frame, theme),
+            DialogType::None => {}
         }
     }
 
     /// Renders the API endpoint dialog in the center of the screen
-    fn render_dialog(
-        &self,
-        frame: &mut Frame,
-        primary_color: Color,
-        text_color: Color,
-        background_color: Color,
-    ) {
+    fn render_api_endpoint_dialog(&self, frame: &mut Frame, t: Theme) {
         let area = frame.area();
 
         // Calculate dialog size and position (centered)
@@ -231,8 +279,8 @@ impl App {
         // Create dialog block with border
         let dialog_block = Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(primary_color))
-            .style(Style::default().bg(background_color));
+            .border_style(Style::default().fg(t.primary))
+            .style(Style::default().bg(t.background));
 
         // Calculate inner area before rendering the block
         let inner_area = dialog_block.inner(dialog_rect);
@@ -250,7 +298,7 @@ impl App {
 
         // Render label
         let label = Paragraph::new(self.localization.ui("api_endpoint_name_prompt"))
-            .style(Style::default().fg(text_color));
+            .style(Style::default().fg(t.text));
         frame.render_widget(label, chunks[0]);
 
         // Render input field
@@ -264,8 +312,167 @@ impl App {
             )
         };
 
-        let input = Paragraph::new(input_text).style(Style::default().fg(primary_color));
+        let input = Paragraph::new(input_text).style(Style::default().fg(t.primary));
         frame.render_widget(input, chunks[1]);
+    }
+
+    /// Renders the settings dialog
+    fn render_settings_dialog(&self, frame: &mut Frame, t: Theme) {
+        let area = frame.area();
+
+        // Calculate dialog size and position (centered)
+        let dialog_width = 60.min(area.width - 4);
+        let dialog_height = 8;
+        let x = (area.width - dialog_width) / 2;
+        let y = (area.height - dialog_height) / 2;
+
+        let dialog_rect = Rect::new(x, y, dialog_width, dialog_height);
+
+        // Clear the area behind the dialog
+        frame.render_widget(Clear, dialog_rect);
+
+        // Create dialog block with border
+        let dialog_block = Block::default()
+            .title(self.localization.ui("settings_title"))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(t.primary))
+            .style(Style::default().bg(t.background));
+
+        let inner_area = dialog_block.inner(dialog_rect);
+        frame.render_widget(dialog_block, dialog_rect);
+
+        // Settings options
+        let settings_options = vec![
+            format!(
+                "{}: {}",
+                self.localization.ui("theme_setting"),
+                self.current_theme
+            ),
+            self.localization.ui("language_setting").to_string(),
+            self.localization.ui("close_dialog").to_string(),
+        ];
+
+        let items: Vec<ListItem> = settings_options
+            .iter()
+            .enumerate()
+            .map(|(i, option)| {
+                let style = if i == self.settings_selected {
+                    Style::default().fg(t.primary).bold()
+                } else {
+                    Style::default().fg(t.text)
+                };
+                ListItem::new(option.clone()).style(style)
+            })
+            .collect();
+
+        let list = List::new(items);
+        frame.render_widget(list, inner_area);
+
+        // Render instruction at the bottom
+        let instruction_rect = Rect::new(
+            dialog_rect.x + 1,
+            dialog_rect.y + dialog_rect.height,
+            dialog_rect.width - 2,
+            1,
+        );
+        let instruction = Paragraph::new(self.localization.msg("settings_instruction"))
+            .style(Style::default().fg(t.text));
+        frame.render_widget(instruction, instruction_rect);
+    }
+
+    /// Renders the language selection dialog
+    fn render_language_dialog(&mut self, frame: &mut Frame, t: Theme) {
+        let area = frame.area();
+
+        // Calculate dialog size and position (centered)
+        let dialog_width = 60.min(area.width - 4);
+        let dialog_height = 15.min(area.height - 4);
+        let x = (area.width - dialog_width) / 2;
+        let y = (area.height - dialog_height) / 2;
+
+        let dialog_rect = Rect::new(x, y, dialog_width, dialog_height);
+
+        // Clear the area behind the dialog
+        frame.render_widget(Clear, dialog_rect);
+
+        // Create dialog block with border
+        let dialog_block = Block::default()
+            .title(self.localization.ui("language_dialog_title"))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(t.primary))
+            .style(Style::default().bg(t.background));
+
+        let inner_area = dialog_block.inner(dialog_rect);
+        frame.render_widget(dialog_block, dialog_rect);
+
+        // Split into search box and list
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Search box
+                Constraint::Min(0),    // Language list
+            ])
+            .split(inner_area);
+
+        // Render search box
+        let search_text = if self.language_search.is_empty() {
+            self.localization
+                .ui("language_search_placeholder")
+                .to_string()
+        } else {
+            format!(
+                "{}{}",
+                self.language_search,
+                self.localization.ui("input_cursor")
+            )
+        };
+
+        let search_box = Paragraph::new(search_text)
+            .style(Style::default().fg(t.primary))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(t.text)),
+            );
+        frame.render_widget(search_box, chunks[0]);
+
+        // Render language list
+        if self.filtered_languages.is_empty() {
+            let no_results = Paragraph::new(self.localization.ui("no_languages_found"))
+                .style(Style::default().fg(t.text))
+                .alignment(Alignment::Center);
+            frame.render_widget(no_results, chunks[1]);
+        } else {
+            let items: Vec<ListItem> = self
+                .filtered_languages
+                .iter()
+                .enumerate()
+                .map(|(i, (_, display))| {
+                    let style = if i == self.language_selected {
+                        Style::default().fg(t.primary).bold()
+                    } else {
+                        Style::default().fg(t.text)
+                    };
+                    ListItem::new(display.clone()).style(style)
+                })
+                .collect();
+
+            let list = List::new(items);
+            self.language_list_state
+                .select(Some(self.language_selected));
+            frame.render_stateful_widget(list, chunks[1], &mut self.language_list_state);
+        }
+
+        // Render instruction at the bottom
+        let instruction_rect = Rect::new(
+            dialog_rect.x + 1,
+            dialog_rect.y + dialog_rect.height,
+            dialog_rect.width - 2,
+            1,
+        );
+        let instruction = Paragraph::new(self.localization.msg("language_instruction"))
+            .style(Style::default().fg(t.text));
+        frame.render_widget(instruction, instruction_rect);
     }
 
     /// Reads the crossterm events and updates the state of [`App`].
@@ -281,65 +488,151 @@ impl App {
 
     /// Handles the key events and updates the state of [`App`].
     pub fn on_key_event(&mut self, key: KeyEvent) {
-        if self.dialog_open {
-            // Handle dialog input using localized key bindings
-            if self
-                .localization
-                .matches_key("enter", key.modifiers, key.code)
-            {
-                // Close dialog and process the API endpoint name
-                let api_endpoint_name = self.api_endpoint_input.clone();
-                self.close_dialog();
-                self.handle_api_endpoint_creation(api_endpoint_name);
-            } else if self
-                .localization
-                .matches_key("escape", key.modifiers, key.code)
-            {
-                self.close_dialog();
-            } else if self
-                .localization
-                .matches_key("backspace", key.modifiers, key.code)
-            {
-                self.api_endpoint_input.pop();
-            } else if let KeyCode::Char(c) = key.code {
-                self.api_endpoint_input.push(c);
+        match &self.current_dialog {
+            DialogType::ApiEndpoint => {
+                self.handle_api_endpoint_dialog_events(key);
             }
-        } else {
-            // Handle main app input using localized key bindings
-            if self
-                .localization
-                .matches_key("quit", key.modifiers, key.code)
-                || self
-                    .localization
-                    .matches_key("quit_combo", key.modifiers, key.code)
-                || self
-                    .localization
-                    .matches_key("escape", key.modifiers, key.code)
-            {
-                self.quit();
-            } else if self
-                .localization
-                .matches_key("add_endpoint", key.modifiers, key.code)
-            {
-                self.open_dialog();
-            } else if self
-                .localization
-                .matches_key("toggle_theme", key.modifiers, key.code)
-            {
-                self.cycle_theme();
+            DialogType::Settings => {
+                self.handle_settings_dialog_events(key);
+            }
+            DialogType::Language => {
+                self.handle_language_dialog_events(key);
+            }
+            DialogType::None => {
+                self.handle_main_app_events(key);
             }
         }
     }
 
-    /// Opens the API endpoint creation dialog
-    fn open_dialog(&mut self) {
-        self.dialog_open = true;
-        self.api_endpoint_input.clear();
+    /// Handles events for the API endpoint dialog
+    fn handle_api_endpoint_dialog_events(&mut self, key: KeyEvent) {
+        if self
+            .localization
+            .matches_key("enter", key.modifiers, key.code)
+        {
+            // Close dialog and process the API endpoint name
+            let api_endpoint_name = self.api_endpoint_input.clone();
+            self.close_dialog();
+            self.handle_api_endpoint_creation(api_endpoint_name);
+        } else if self
+            .localization
+            .matches_key("escape", key.modifiers, key.code)
+        {
+            self.close_dialog();
+        } else if self
+            .localization
+            .matches_key("backspace", key.modifiers, key.code)
+        {
+            self.api_endpoint_input.pop();
+        } else if let KeyCode::Char(c) = key.code {
+            self.api_endpoint_input.push(c);
+        }
     }
 
-    /// Closes the API endpoint creation dialog
-    fn close_dialog(&mut self) {
-        self.dialog_open = false;
+    /// Handles events for the settings dialog
+    fn handle_settings_dialog_events(&mut self, key: KeyEvent) {
+        if self
+            .localization
+            .matches_key("escape", key.modifiers, key.code)
+        {
+            self.close_dialog();
+        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Up {
+            if self.settings_selected > 0 {
+                self.settings_selected -= 1;
+            } else {
+                self.settings_selected = 2; // Wrap to bottom (Close option)
+            }
+        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Down {
+            self.settings_selected = (self.settings_selected + 1) % 3;
+        } else if self
+            .localization
+            .matches_key("enter", key.modifiers, key.code)
+        {
+            match self.settings_selected {
+                0 => {
+                    // Theme option
+                    self.cycle_theme();
+                }
+                1 => {
+                    // Language option
+                    self.open_language_dialog();
+                }
+                2 => {
+                    // Close option
+                    self.close_dialog();
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Handles events for the language dialog
+    fn handle_language_dialog_events(&mut self, key: KeyEvent) {
+        if self
+            .localization
+            .matches_key("escape", key.modifiers, key.code)
+        {
+            self.close_dialog();
+        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Up {
+            if !self.filtered_languages.is_empty() && self.language_selected > 0 {
+                self.language_selected -= 1;
+            } else if !self.filtered_languages.is_empty() {
+                self.language_selected = self.filtered_languages.len() - 1;
+            }
+        } else if key.modifiers == KeyModifiers::NONE && key.code == KeyCode::Down {
+            if !self.filtered_languages.is_empty() {
+                self.language_selected =
+                    (self.language_selected + 1) % self.filtered_languages.len();
+            }
+        } else if self
+            .localization
+            .matches_key("enter", key.modifiers, key.code)
+        {
+            if !self.filtered_languages.is_empty() {
+                let selected_language = self.filtered_languages[self.language_selected].0.clone();
+                self.select_language(selected_language);
+            }
+        } else if self
+            .localization
+            .matches_key("backspace", key.modifiers, key.code)
+        {
+            self.language_search.pop();
+            self.filter_languages();
+        } else if let KeyCode::Char(c) = key.code {
+            self.language_search.push(c);
+            self.filter_languages();
+        }
+    }
+
+    /// Handles events for the main application
+    fn handle_main_app_events(&mut self, key: KeyEvent) {
+        if self
+            .localization
+            .matches_key("quit", key.modifiers, key.code)
+            || self
+                .localization
+                .matches_key("quit_combo", key.modifiers, key.code)
+            || self
+                .localization
+                .matches_key("escape", key.modifiers, key.code)
+        {
+            self.quit();
+        } else if self
+            .localization
+            .matches_key("add_endpoint", key.modifiers, key.code)
+        {
+            self.open_dialog(DialogType::ApiEndpoint);
+        } else if self
+            .localization
+            .matches_key("settings", key.modifiers, key.code)
+        {
+            self.open_dialog(DialogType::Settings);
+        }
+    }
+
+    /// Opens the API endpoint creation dialog
+    fn open_dialog(&mut self, dialog_type: DialogType) {
+        self.current_dialog = dialog_type;
         self.api_endpoint_input.clear();
     }
 
@@ -391,5 +684,68 @@ impl App {
                 let _ = save_current_theme(&self.current_theme);
             }
         }
+    }
+
+    /// Opens the language selection dialog
+    fn open_language_dialog(&mut self) {
+        self.current_dialog = DialogType::Language;
+        self.language_search.clear();
+        self.language_selected = 0;
+        self.filter_languages();
+    }
+
+    /// Selects a language and closes the dialog
+    fn select_language(&mut self, language_code: String) {
+        // Save the selected language to config
+        if let Err(_) = save_current_language(&language_code) {
+            // Handle error gracefully - in production, you might want to show an error message
+            return;
+        }
+
+        // Reload the localization with the new language
+        if let Err(_) = self.localization.reload(&language_code) {
+            // Handle error gracefully - fallback to English if reload fails
+            let _ = self.localization.reload("en");
+        }
+
+        self.close_dialog();
+    }
+
+    /// Filters the languages based on the search input
+    fn filter_languages(&mut self) {
+        let search_term = self.language_search.to_lowercase();
+
+        if let Ok(available_languages) = get_available_languages_with_display() {
+            self.filtered_languages = available_languages
+                .into_iter()
+                .filter(|(code, display)| {
+                    code.to_lowercase().contains(&search_term)
+                        || display.to_lowercase().contains(&search_term)
+                })
+                .collect();
+        } else {
+            self.filtered_languages = Vec::new();
+        }
+
+        // Reset selected index, ensuring it's within bounds
+        self.language_selected = 0;
+        if !self.filtered_languages.is_empty()
+            && self.language_selected >= self.filtered_languages.len()
+        {
+            self.language_selected = self.filtered_languages.len() - 1;
+        }
+
+        // If only one item after filtering, we could auto-select it on Enter
+        // The current implementation allows navigation even with one item
+    }
+
+    /// Closes the current dialog and resets dialog-specific state
+    fn close_dialog(&mut self) {
+        self.current_dialog = DialogType::None;
+        self.api_endpoint_input.clear();
+        self.language_search.clear();
+        self.language_selected = 0;
+        self.settings_selected = 0;
+        self.filtered_languages.clear();
     }
 }

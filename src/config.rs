@@ -124,3 +124,15 @@ pub fn get_available_languages() -> Result<Vec<String>, RextTuiError> {
     languages.sort();
     Ok(languages)
 }
+
+/// Gets the available languages with their display names for the TUI from rext_tui.toml
+pub fn get_available_languages_with_display() -> Result<Vec<(String, String)>, RextTuiError> {
+    let config = load_config()?;
+    let mut languages: Vec<(String, String)> = config
+        .localization
+        .iter()
+        .map(|(key, value)| (key.clone(), value.display.clone()))
+        .collect();
+    languages.sort_by(|a, b| a.1.cmp(&b.1));
+    Ok(languages)
+}
