@@ -13,6 +13,8 @@ close_dialog = "Close"
 language_dialog_title = "Select Language"
 language_search_placeholder = "Search languages..."
 no_languages_found = "No languages found"
+new_app_dialog_title = "No Rext app found"
+new_app_dialog_prompt = "Create a new Rext app?"
 
 [messages]
 quit_instruction_prefix = "Press "

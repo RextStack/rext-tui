@@ -55,8 +55,8 @@
 use crossterm::event::{KeyCode, KeyModifiers};
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::fs;
 
+use crate::config;
 use crate::error::RextTuiError;
 
 /// Stores the localized texts for the TUI from the localization directory
@@ -190,10 +190,11 @@ impl Localization {
         ]
     }
 
-    /// Loads the localized texts for the TUI from the localization directory
+    /// Loads the localized texts for the TUI using the config system
+    ///
+    /// This loads from user overrides first, then falls back to embedded defaults.
     fn load_language(lang: &str) -> Result<LocalizedTexts, RextTuiError> {
-        let path = format!("localization/{}.toml", lang);
-        let content = fs::read_to_string(&path).map_err(|e| RextTuiError::ReadConfigFile(e))?;
+        let content = config::load_localization_content(lang)?;
         toml::from_str(&content).map_err(|e| RextTuiError::ConfigError(e))
     }
 

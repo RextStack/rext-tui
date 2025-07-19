@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added comprehensive key parsing for all common key types (F1-F12, modifiers, etc.)
 - Added validation system for localization key bindings
 - Added case-insensitive key parsing and better error handling
+- Added dirs crate for getting user home directory and packaging assets
+- Added rext-core dependency for creating new Rext apps
 
 ### Fixed
 
@@ -46,6 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Replaced the key controls with localization system
 - Moved theme switching from main interface (t key) to settings dialog
 - Added more documentation to the codebase
+- Overhauled the config system- package configs with binary, but can override with user configs in ~/.rext/
 
 ### Removed
 

@@ -19,3 +19,8 @@ color-eyre = "0.6.3"
 thiserror = "2.0.12"
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "0.9.2"
+# local version of rext-core for development
+rext-core = { path = "../rext-core" }
+dirs = "6.0.0"
+# the actual dependency from crates.io, needs to be used when publishing
+# rext-core = "0.1.0"
