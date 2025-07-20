@@ -5,6 +5,9 @@
 [![MIT](https://img.shields.io/crates/l/rext-tui.svg)](./LICENSE)
 [![Rust](https://github.com/RextStack/rext-tui/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/RextStack/rext-tui/actions/workflows/rust.yml)
 
+> **Note**
+> Build step will fail until the latest rext-core is published to crates.io, works locally where we're using the latest version.
+
 The Rext Terminal User Interface, used to scaffold and build Rext apps.
 
 [Ratatui]: https://ratatui.rs
