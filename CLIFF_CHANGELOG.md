@@ -35,6 +35,11 @@ All notable changes to this project will be documented in this file.
 - *(changelog)* Update changelog
 - *(changelog)* Updated
 - *(changelog)* Updated
+- *(changelog)* Updated
+- *(readme)* Add note about build step dependency on rext-core
+- *(readme)* Fixed the build badge
+- *(readme)* Clarify Rext Core library and TUI dependency
+- *(readme)* Removed incorrect note about "this crate"
 
 ### ⚙️ Miscellaneous Tasks
 
