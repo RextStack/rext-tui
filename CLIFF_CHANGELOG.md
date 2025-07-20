@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - *(workflow)* Update branch references from 'main' to 'master'
+- *(destroy)* Use unused result
 
 ### 📚 Documentation
 
@@ -32,6 +33,7 @@ All notable changes to this project will be documented in this file.
 - *(config, lib)* Enhanced docs for config and main lib
 - *(changelog)* Update changelog
 - *(changelog)* Update changelog
+- *(changelog)* Updated
 
 ### ⚙️ Miscellaneous Tasks
 
