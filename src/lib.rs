@@ -33,6 +33,7 @@ use crate::config::{
 use crate::error::RextTuiError;
 use crate::localization::Localization;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::text::Line;
 use ratatui::{
     DefaultTerminal, Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -52,6 +53,7 @@ pub enum DialogType {
     ApiEndpoint,
     Settings,
     Language,
+    NewApp,
 }
 
 /// Settings dialog options
@@ -63,6 +65,7 @@ pub enum DialogType {
 pub enum SettingsOption {
     Theme,
     Language,
+    Destroy,
     Close,
 }
 
@@ -88,6 +91,12 @@ pub struct App {
     pub filtered_languages: Vec<(String, String)>,
     /// Language dialog list state
     pub language_list_state: ListState,
+    /// New app dialog selected button (0 = Create, 1 = Cancel)
+    pub new_app_button_selected: usize,
+    /// New app dialog result message
+    pub new_app_message: Option<String>,
+    /// Current directory name for display
+    pub current_dir_name: String,
 }
 
 /// Theme colors
@@ -152,6 +161,14 @@ impl Default for App {
             language_selected: 0,
             filtered_languages: Vec::new(),
             language_list_state: ListState::default(),
+            new_app_button_selected: 0,
+            new_app_message: None,
+            current_dir_name: std::env::current_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new("current"))
+                .to_string_lossy()
+                .to_string(),
         }
     }
 }
@@ -178,6 +195,14 @@ impl App {
             language_selected: 0,
             filtered_languages: Vec::new(),
             language_list_state: ListState::default(),
+            new_app_button_selected: 0,
+            new_app_message: None,
+            current_dir_name: std::env::current_dir()
+                .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                .file_name()
+                .unwrap_or_else(|| std::ffi::OsStr::new("current"))
+                .to_string_lossy()
+                .to_string(),
         }
     }
 
@@ -194,6 +219,10 @@ impl App {
     /// Renders the user interface.
     /// This is responsible for setting the theme, localizations, and drawing the main app screen
     fn render(&mut self, frame: &mut Frame) {
+        //
+        // Build Layout
+        // ------------
+
         // Load colors
         let (primary_color, text_color, background_color) = self.load_colors();
         let theme = Theme {
@@ -206,7 +235,7 @@ impl App {
         let background = Block::default().style(Style::default().bg(background_color));
         frame.render_widget(background, frame.area());
 
-        // Main layout
+        // Main area
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -282,7 +311,27 @@ impl App {
             bottom_area.width,
             1,
         );
+
+        //
+        // Render App
+        // ----------
         frame.render_widget(quit_paragraph, quit_rect);
+
+        //
+        // Dialogs
+        // -------
+
+        //
+        // Check for Rext App
+        // ------------------
+        // Open the new app dialog if no app exists
+        let rext_app_exists = rext_core::check_for_rext_app();
+        // If no app exists, open the new app dialog
+        // This is a sort of "infinite loop", as the user can't close the dialog without creating an app.
+        // They can however close the app, so it's fine.
+        if !rext_app_exists {
+            self.current_dialog = DialogType::NewApp;
+        }
 
         // Render dialog if open
         if self.current_dialog != DialogType::None {
@@ -296,6 +345,7 @@ impl App {
             DialogType::ApiEndpoint => self.render_api_endpoint_dialog(frame, theme),
             DialogType::Settings => self.render_settings_dialog(frame, theme),
             DialogType::Language => self.render_language_dialog(frame, theme),
+            DialogType::NewApp => self.render_new_app_dialog(frame, theme),
             DialogType::None => {}
         }
     }
@@ -399,6 +449,7 @@ impl App {
                 self.current_theme
             ),
             self.localization.ui("language_setting").to_string(),
+            self.localization.ui("destroy_app_setting").to_string(),
             self.localization.ui("close_dialog").to_string(),
         ];
 
@@ -530,6 +581,158 @@ impl App {
         frame.render_widget(instruction, instruction_rect);
     }
 
+    /// Renders the new app dialog
+    ///
+    /// - `frame`: The frame to render the dialog on
+    /// - `t`: The theme to use for the dialog
+    ///
+    /// This dialog is triggered when no Rext app is found in the current directory.
+    /// It allows the user to create a new Rext app.
+    fn render_new_app_dialog(&self, frame: &mut Frame, t: Theme) {
+        let area = frame.area();
+
+        // Calculate dialog size and position (centered)
+        let dialog_width = 70.min(area.width - 4);
+        let dialog_height = 12.min(area.height - 4);
+        let x = (area.width - dialog_width) / 2;
+        let y = (area.height - dialog_height) / 2;
+
+        let dialog_rect = Rect::new(x, y, dialog_width, dialog_height);
+
+        // Clear the area behind the dialog
+        frame.render_widget(Clear, dialog_rect);
+
+        // Create dialog block with border
+        let dialog_block = Block::default()
+            .title(Line::from(self.localization.ui("new_app_dialog_title")).centered())
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(t.primary))
+            .style(Style::default().bg(t.background));
+
+        let inner_area = dialog_block.inner(dialog_rect);
+        frame.render_widget(dialog_block, dialog_rect);
+
+        // Layout for dialog content
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(2), // Top spacing + no app detected message
+                Constraint::Length(1), // Question message
+                Constraint::Length(2), // Spacing
+                Constraint::Length(3), // Buttons
+                Constraint::Length(1), // Result message (if any)
+                Constraint::Min(0),    // Bottom spacing
+            ])
+            .split(inner_area);
+
+        // Render "No rext app detected!" message
+        let no_app_message = Paragraph::new(self.localization.ui("new_app_no_app_detected"))
+            .style(Style::default().fg(t.text))
+            .alignment(Alignment::Center);
+        frame.render_widget(no_app_message, chunks[0]);
+
+        // Render "Would you like to create a new Rext app?" question
+        let question_message = Paragraph::new(self.localization.ui("new_app_dialog_prompt"))
+            .style(Style::default().fg(t.text))
+            .alignment(Alignment::Center);
+        frame.render_widget(question_message, chunks[1]);
+
+        // Render buttons - using fixed width and centering
+        let button_area = chunks[3];
+
+        // Create a horizontal layout with flexible spacing to center the buttons
+        let button_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Min(0),     // Flexible left spacing
+                Constraint::Length(15), // Create button (fixed 10 chars)
+                Constraint::Length(4),  // Gap between buttons
+                Constraint::Length(15), // Cancel button (fixed 10 chars)
+                Constraint::Min(0),     // Flexible right spacing
+            ])
+            .split(button_area);
+
+        // How do buttons work? Well
+        // There is the style, the paragraph of text, and the block.
+        // The paragraph uses the button style, the block either surounds the paragraph or is inside it? or apart of it?
+        // the block has it's own styles too, mostly for border.
+        // removing the block will force the paragraph to 'not be centered' since it's much smaller.
+        //
+        //
+
+        // Create button style
+        let create_style = if self.new_app_button_selected == 0 {
+            Style::default().fg(t.background).bg(t.primary)
+        } else {
+            Style::default().fg(t.primary).bg(t.background)
+        };
+
+        // create block border style
+        let create_block_style = if self.new_app_button_selected == 0 {
+            Style::default().fg(t.background)
+        } else {
+            Style::default().fg(t.primary)
+        };
+
+        let create_button = Paragraph::new(self.localization.ui("new_app_create_button"))
+            .style(create_style)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(create_block_style),
+            );
+        frame.render_widget(create_button, button_layout[1]);
+
+        // Cancel button style
+        let cancel_style = if self.new_app_button_selected == 1 {
+            Style::default().fg(t.background).bg(t.primary)
+        } else {
+            Style::default().fg(t.primary).bg(t.background)
+        };
+
+        // cancel block border style
+        let cancel_block_style = if self.new_app_button_selected == 1 {
+            Style::default().fg(t.background)
+        } else {
+            Style::default().fg(t.primary)
+        };
+
+        let cancel_button = Paragraph::new(self.localization.ui("new_app_cancel_button"))
+            .style(cancel_style)
+            .alignment(Alignment::Center)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(cancel_block_style),
+            );
+        frame.render_widget(cancel_button, button_layout[3]);
+
+        // Render result message if present
+        if let Some(ref message) = self.new_app_message {
+            let message_style = if message.contains("problem") {
+                Style::default().fg(Color::Red)
+            } else {
+                Style::default().fg(Color::Green)
+            };
+            let result_message = Paragraph::new(message.clone())
+                .style(message_style)
+                .alignment(Alignment::Center);
+            frame.render_widget(result_message, chunks[4]);
+        }
+
+        // Render instruction at the bottom
+        let instruction_rect = Rect::new(
+            dialog_rect.x + 1,
+            dialog_rect.y + dialog_rect.height,
+            dialog_rect.width - 2,
+            1,
+        );
+        let instruction = Paragraph::new(self.localization.msg("new_app_instruction"))
+            .style(Style::default().fg(t.text));
+        frame.render_widget(instruction, instruction_rect);
+    }
+
     /// Reads the crossterm events and updates the state of [`App`].
     fn handle_crossterm_events(&mut self) -> Result<(), RextTuiError> {
         match event::read()? {
@@ -552,6 +755,9 @@ impl App {
             }
             DialogType::Language => {
                 self.handle_language_dialog_events(key);
+            }
+            DialogType::NewApp => {
+                self.handle_new_app_dialog_events(key);
             }
             DialogType::None => {
                 self.handle_main_app_events(key);
@@ -595,13 +801,13 @@ impl App {
             if self.settings_selected > 0 {
                 self.settings_selected -= 1;
             } else {
-                self.settings_selected = 2; // Wrap to bottom (Close option)
+                self.settings_selected = 3; // Wrap to bottom (Close option)
             }
         } else if self
             .localization
             .matches_key("down", key.modifiers, key.code)
         {
-            self.settings_selected = (self.settings_selected + 1) % 3;
+            self.settings_selected = (self.settings_selected + 1) % 4;
         } else if self
             .localization
             .matches_key("enter", key.modifiers, key.code)
@@ -616,6 +822,10 @@ impl App {
                     self.open_language_dialog();
                 }
                 2 => {
+                    // Destroy option
+                    rext_core::destroy_rext_app();
+                }
+                3 => {
                     // Close option
                     self.close_dialog();
                 }
@@ -662,6 +872,47 @@ impl App {
         } else if let KeyCode::Char(c) = key.code {
             self.language_search.push(c);
             self.filter_languages();
+        }
+    }
+
+    /// Handles events for the new app dialog
+    fn handle_new_app_dialog_events(&mut self, key: KeyEvent) {
+        if self
+            .localization
+            .matches_key("left", key.modifiers, key.code)
+        {
+            // Navigate to Create button (0)
+            self.new_app_button_selected = 0;
+        } else if self
+            .localization
+            .matches_key("right", key.modifiers, key.code)
+        {
+            // Navigate to Cancel button (1)
+            self.new_app_button_selected = 1;
+        } else if self
+            .localization
+            .matches_key("enter", key.modifiers, key.code)
+        {
+            // Handle button action based on selection
+            if self.new_app_button_selected == 0 {
+                // Create button - scaffold new app
+                self.handle_new_app_creation();
+            } else {
+                // Cancel button - quit application
+                self.quit();
+            }
+        } else if self
+            .localization
+            .matches_key("quit", key.modifiers, key.code)
+            || self
+                .localization
+                .matches_key("quit_combo", key.modifiers, key.code)
+            || self
+                .localization
+                .matches_key("escape", key.modifiers, key.code)
+        {
+            // Include option to quit from new app dialog
+            self.quit();
         }
     }
 
@@ -798,6 +1049,29 @@ impl App {
 
         // If only one item after filtering, we could auto-select it on Enter
         // The current implementation allows navigation even with one item
+    }
+
+    /// Handles the creation of a new Rext app by calling the scaffold function
+    fn handle_new_app_creation(&mut self) {
+        // Call the scaffold function from rext_core
+        match rext_core::scaffold_rext_app() {
+            Ok(_) => {
+                self.new_app_message = Some(
+                    self.localization
+                        .ui("new_app_success_message")
+                        .replace("{dir_name}", &self.current_dir_name),
+                );
+                // Close dialog after successful creation
+                //self.close_dialog();
+            }
+            Err(_) => {
+                self.new_app_message = Some(
+                    self.localization
+                        .ui("new_app_error_message")
+                        .replace("{dir_name}", &self.current_dir_name),
+                );
+            }
+        }
     }
 
     /// Closes the current dialog and resets dialog-specific state

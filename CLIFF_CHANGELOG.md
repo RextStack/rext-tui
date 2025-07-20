@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - *(dialogs)* Implement settings and language selection dialogs
 - *(localization)* Enhance key parsing and validation system
 - *(styling)* Introduce `styled_span!` and `styled_line!` macros for easier text styling
+- *(config)* Add user configuration support, package configs with bin
 
 ### 🐛 Bug Fixes
 
@@ -28,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - *(changelog)* Update changelog to include enhancements in key parsing and validation for localization
 - *(changelog)* Update changelog to reflect recent enhancements in key parsing and validation for localization
 - *(config, lib)* Enhanced docs for config and main lib
+- *(changelog)* Update changelog
 - *(changelog)* Update changelog
 
 ### ⚙️ Miscellaneous Tasks
