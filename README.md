@@ -18,8 +18,6 @@ Rext TUI is built on the fantastic [Ratatui](https://ratatui.rs) library.
 
 Rext is a fullstack Rust framework in active development, aimed at providing a batteries included experience for building fullstack web applications.
 
-This crate serves as the core of Rext that provides all the mandatory functionality and is extensible so additional rext modules can be added to rext projects as needed.
-
 ## What does the TUI do?
 
 The Rext TUI will be responsible for:
