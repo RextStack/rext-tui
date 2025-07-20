@@ -588,6 +588,7 @@ impl App {
     ///
     /// This dialog is triggered when no Rext app is found in the current directory.
     /// It allows the user to create a new Rext app.
+    /// TODO - after creating the app, hide the buttons for clarity.
     fn render_new_app_dialog(&self, frame: &mut Frame, t: Theme) {
         let area = frame.area();
 
@@ -823,7 +824,22 @@ impl App {
                 }
                 2 => {
                     // Destroy option
-                    rext_core::destroy_rext_app();
+                    match rext_core::destroy_rext_app() {
+                        Ok(_) => {
+                            self.new_app_message = Some(
+                                self.localization
+                                    .msg("destroy_app_success")
+                                    .replace("{dir_name}", &self.current_dir_name),
+                            );
+                        }
+                        Err(e) => {
+                            self.new_app_message = Some(
+                                self.localization
+                                    .msg("destroy_app_error")
+                                    .replace("{error}", &e.to_string()),
+                            );
+                        }
+                    }
                 }
                 3 => {
                     // Close option
@@ -903,13 +919,15 @@ impl App {
             }
         } else if self
             .localization
+            .matches_key("escape", key.modifiers, key.code)
+        {
+            self.close_dialog();
+        } else if self
+            .localization
             .matches_key("quit", key.modifiers, key.code)
             || self
                 .localization
                 .matches_key("quit_combo", key.modifiers, key.code)
-            || self
-                .localization
-                .matches_key("escape", key.modifiers, key.code)
         {
             // Include option to quit from new app dialog
             self.quit();
@@ -1061,8 +1079,6 @@ impl App {
                         .ui("new_app_success_message")
                         .replace("{dir_name}", &self.current_dir_name),
                 );
-                // Close dialog after successful creation
-                //self.close_dialog();
             }
             Err(_) => {
                 self.new_app_message = Some(
