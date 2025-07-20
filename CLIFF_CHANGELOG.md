@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - *(localization)* Enhance key parsing and validation system
 - *(styling)* Introduce `styled_span!` and `styled_line!` macros for easier text styling
 - *(config)* Add user configuration support, package configs with bin
+- *(dialogs)* Add new app dialog and destroy app functionality
 
 ### 🐛 Bug Fixes
 
