@@ -10,7 +10,9 @@
 
 The Rext Terminal User Interface, used to scaffold and build Rext apps.
 
-[Ratatui]: https://ratatui.rs
+The Core library or Rext (where all the magic happens) is [Rext Core](https://github.com/RextStack/rext-core)
+
+Rext TUI is built on the fantastic [Ratatui](https://ratatui.rs) library.
 
 ## What is Rext?
 
