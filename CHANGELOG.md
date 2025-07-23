@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added rext-core dependency for creating new Rext apps
 - Added create_new_app dialog, spawns when TUI is launched and rext_core::check_for_rext_app returns false, calls rext_core::scaffold_rext_app
 - Added destroy_rext_app to settings, removes everything from a rext project (for testing!)
+- Added generate_sea_orm_entities button to main interface, calls rext_core::generate_sea_orm_entities
 
 ### Fixed
 

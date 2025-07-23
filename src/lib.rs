@@ -251,10 +251,20 @@ impl App {
         let top_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([
-                Constraint::Min(0),     // Left side for API endpoint button
+                Constraint::Min(0),     // Left side for API endpoint and SeaORM buttons
                 Constraint::Length(30), // Right side for settings button
             ])
             .split(top_area);
+
+        // Split left side vertically for two buttons
+        let left_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1), // API endpoint button
+                Constraint::Length(1), // SeaORM entities button
+                Constraint::Min(0),    // Remaining space
+            ])
+            .split(top_chunks[0]);
 
         // Left side: "add API endpoint" button
         let button_text = styled_line!(
@@ -266,9 +276,26 @@ impl App {
         frame.render_widget(
             button_paragraph,
             Rect::new(
-                top_chunks[0].x + 1,
-                top_chunks[0].y + 1,
-                top_chunks[0].width,
+                left_chunks[0].x + 1,
+                left_chunks[0].y,
+                left_chunks[0].width,
+                1,
+            ),
+        );
+
+        // Left side: "Generate SeaORM Entities" button
+        let seaorm_text = styled_line!(
+            self.localization, ui, "generate_sea_orm_entities", primary_color, bold;
+            self.localization, ui, "generate_sea_orm_entities_shortcut", text_color
+        );
+
+        let seaorm_paragraph = Paragraph::new(seaorm_text).style(Style::default().fg(text_color));
+        frame.render_widget(
+            seaorm_paragraph,
+            Rect::new(
+                left_chunks[1].x + 1,
+                left_chunks[1].y,
+                left_chunks[1].width,
                 1,
             ),
         );
@@ -952,6 +979,12 @@ impl App {
             .matches_key("add_endpoint", key.modifiers, key.code)
         {
             self.open_dialog(DialogType::ApiEndpoint);
+        } else if self.localization.matches_key(
+            "generate_sea_orm_entities_with_open_api_schema",
+            key.modifiers,
+            key.code,
+        ) {
+            self.generate_sea_orm_entities_with_open_api_schema();
         } else if self
             .localization
             .matches_key("settings", key.modifiers, key.code)
@@ -1098,5 +1131,26 @@ impl App {
         self.language_selected = 0;
         self.settings_selected = 0;
         self.filtered_languages.clear();
+    }
+
+    /// Generates SeaORM entities with OpenAPI schema
+    fn generate_sea_orm_entities_with_open_api_schema(&mut self) {
+        // Call the generate_sea_orm_entities_with_open_api_schema function from rext_core
+        match rext_core::generate_sea_orm_entities_with_open_api_schema() {
+            Ok(_) => {
+                self.new_app_message = Some(
+                    self.localization
+                        .ui("new_app_success_message")
+                        .replace("{dir_name}", &self.current_dir_name),
+                );
+            }
+            Err(_) => {
+                self.new_app_message = Some(
+                    self.localization
+                        .ui("new_app_error_message")
+                        .replace("{dir_name}", &self.current_dir_name),
+                );
+            }
+        }
     }
 }

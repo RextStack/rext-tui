@@ -1,6 +1,8 @@
 [ui]
 add_api_endpoint = "Add API endpoint"
 add_api_endpoint_shortcut = " (e)"
+generate_sea_orm_entities = "Generate SeaORM Entities"
+generate_sea_orm_entities_shortcut = " (g)"
 theme_label = "Theme: "
 theme_shortcut = " (t)"
 api_endpoint_name_prompt = "API endpoint name:"
@@ -34,6 +36,7 @@ destroy_app_error = "An error ocurred dismantling the Rext app: {error}"
 
 [keys]
 add_endpoint = "e"
+generate_sea_orm_entities_with_open_api_schema = "g"
 toggle_theme = "t"
 settings = "s"
 quit = "q"
