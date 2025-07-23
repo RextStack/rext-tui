@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - *(styling)* Introduce `styled_span!` and `styled_line!` macros for easier text styling
 - *(config)* Add user configuration support, package configs with bin
 - *(dialogs)* Add new app dialog and destroy app functionality
+- *(ui)* Add SeaORM entities button and functionality
 
 ### 🐛 Bug Fixes
 
@@ -40,6 +41,8 @@ All notable changes to this project will be documented in this file.
 - *(readme)* Fixed the build badge
 - *(readme)* Clarify Rext Core library and TUI dependency
 - *(readme)* Removed incorrect note about "this crate"
+- *(dev-server)* Added roadmap
+- *(changelog)* Update changelog and README
 
 ### ⚙️ Miscellaneous Tasks
 
